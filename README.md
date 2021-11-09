@@ -4,9 +4,9 @@
 - 为了更方便解决实际遇见的问题，拥有改造Workerman的能力。
 - 为了探索“浏览器到服务器”，这中间发生了什么。
 - 当然，能给Workerman 开源社区贡献一份的力量。[ 还在做梦实现中 ..... ]
-#### 笔记本配置：
+## 笔记本配置：
     CPU I7U + 16GB RAM + 8 核心
-#### 测试代码：
+## 测试代码：
     <?php
     require __DIR__ . "/../vendor/autoload.php";
     
@@ -25,7 +25,7 @@
     $server->group = "meows";
     $server->start();
 
-#### 性能测试结果：
+## 性能测试结果：
 
     root@LAPTOP-8LA5CDLH:/usr/local# ab -n 10000 -c 1500 -k http://127.0.0.1:19000/
     This is ApacheBench, Version 2.3 <$Revision: 1807734 $>
