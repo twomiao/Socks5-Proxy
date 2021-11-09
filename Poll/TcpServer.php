@@ -388,8 +388,12 @@ EOF;
         if (!in_array($command, array_keys($available_commands), true)) {
             exit($usage);
         }
-        if (isset($argv[2]) && !in_array($argv[2], $available_commands[$command], true)) {
-            exit($usage);
+        if (isset($argv[2])) {
+            if(!in_array($argv[2], $available_commands[$command], true))
+            {
+                exit($usage);
+            }
+            $mode = $argv[2];
         }
 
         if (posix_getuid() !== 0) {
