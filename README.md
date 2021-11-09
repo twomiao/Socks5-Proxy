@@ -1,11 +1,14 @@
-## Workerman 设计 + Swoole扩展实现，命名为“Swoman”
+## Swoman
+
+Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”。
+
+## 前行动力：
 - 为了探索Workerman 实现原理，使用Swoole4 + Pcntl 实现核心功能。
 - 为了更方便了解原理，实现的单实例多进程Server 非多实例，当然这并不影响，掌握它的原理。
 - 为了更方便解决实际遇见的问题，拥有改造Workerman的能力。
-- 为了探索“浏览器到服务器”，这中间发生了什么。
-- 当然，能给Workerman 开源社区贡献一份的力量。[ 还在做梦实现中 ..... ]
+
 ## 笔记本配置：
-    CPU I7U + 16GB RAM + 8 核心
+    CPU I7U 8 核心 + 16GB RAM
 ## 样本代码：
     <?php
     require __DIR__ . "/../vendor/autoload.php";
