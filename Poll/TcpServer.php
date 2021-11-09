@@ -346,7 +346,7 @@ class TcpServer
      */
     protected static function workerCount(int $count = 5): int
     {
-        if ($count <= 1) {
+        if ($count < 1) {
             if (\function_exists('swoole_cpu_num')) {
                 return \swoole_cpu_num();
             }
