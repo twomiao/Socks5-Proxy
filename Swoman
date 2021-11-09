@@ -6,7 +6,7 @@ $server = new \Swoman\Poll\TcpServer('tcp://127.0.0.1:19000');
 $server->onMessage = function (\Swoman\Poll\TcpConnection $connection, $buffer)
 {
   $connection->send("HTTP/1.1 200 OK
-Server: Poll
+Server: Swoman
 Connection: keep-alive
 Content-Type: text/html;charset=utf-8
 Content-Length: 12\r\n

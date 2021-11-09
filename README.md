@@ -46,7 +46,7 @@
     Finished 10000 requests
     
     
-    Server Software:        Poll
+    Server Software:        Swoman
     Server Hostname:        127.0.0.1
     Server Port:            19000
     
