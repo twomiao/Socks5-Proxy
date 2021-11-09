@@ -1,0 +1,14 @@
+{
+    "require": {
+        "symfony/console": "^5.3",
+        "ext-pcntl": "*",
+        "ext-swoole": "*",
+        "ext-posix": "*" ,
+        "ext-sockets": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Swoman\\": ""
+        }
+    }
+}

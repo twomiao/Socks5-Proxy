@@ -1,0 +1,19 @@
+<?php
+require __DIR__ . '/vendor/autoload.php';
+
+$server = new \Swoman\Poll\TcpServer('tcp://127.0.0.1:19000');
+
+$server->onMessage = function (\Swoman\Poll\TcpConnection $connection, $buffer)
+{
+  $connection->send("HTTP/1.1 200 OK
+Server: Poll
+Connection: keep-alive
+Content-Type: text/html;charset=utf-8
+Content-Length: 12\r\n
+".str_repeat('Hello,Swoman', 400));
+};
+$server->count = 4;
+$server->name = 'meows';
+$server->group = 'meows';
+$server->start();
+
