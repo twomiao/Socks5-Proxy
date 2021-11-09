@@ -12,7 +12,6 @@ Content-Type: text/html;charset=utf-8
 Content-Length: 12\r\n
 ".str_repeat('Hello,Swoman', 400));
 };
-$server->count = 4;
 $server->name = 'meows';
 $server->group = 'meows';
 $server->start();

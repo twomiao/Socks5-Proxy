@@ -346,10 +346,14 @@ class TcpServer
      */
     protected static function workerCount(int $count = 5): int
     {
-        if (\function_exists('swoole_cpu_num')) {
-            return \swoole_cpu_num();
+        if ($count <= 1) {
+            if (\function_exists('swoole_cpu_num')) {
+                return \swoole_cpu_num();
+            }
+
+            return 1;
         }
-        return $count <= 1 ? 1 : $count;
+        return $count;
     }
 
     protected function forkOneWorker(int $workerId)
@@ -468,7 +472,7 @@ EOF;
                     if (isset(static::$pidMap[$pid])) {
                         // 异常退出进程
                         if ($status !== 0) {
-                            echo "Work process {$pid} exited abnormally: {$status}\n";
+                            echo "Worker process {$pid} exited abnormally: {$status}\n";
                         }
 
                         $workerId = array_search($pid, static::$idMap);
