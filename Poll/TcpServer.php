@@ -1,4 +1,5 @@
 <?php
+
 namespace Swoman\Poll;
 
 use Swoole\Process;
@@ -334,10 +335,21 @@ class TcpServer
 
     protected function forkWorkers()
     {
-        $count = $this->count <= 1 ? 1 : $this->count;
-        for ($worker_id = 0; $worker_id < $count; $worker_id++) {
+        for ($worker_id = 0; $worker_id < static::workerCount($this->count); $worker_id++) {
             $this->forkOneWorker($worker_id);
         }
+    }
+
+    /**
+     * @param int $count
+     * @return int
+     */
+    protected static function workerCount(int $count = 5): int
+    {
+        if (\function_exists('swoole_cpu_num')) {
+            return \swoole_cpu_num();
+        }
+        return $count <= 1 ? 1 : $count;
     }
 
     protected function forkOneWorker(int $workerId)
@@ -389,8 +401,7 @@ EOF;
             exit($usage);
         }
         if (isset($argv[2])) {
-            if(!in_array($argv[2], $available_commands[$command], true))
-            {
+            if (!in_array($argv[2], $available_commands[$command], true)) {
                 exit($usage);
             }
             $mode = $argv[2];

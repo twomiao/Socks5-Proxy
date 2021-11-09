@@ -16,4 +16,3 @@ $server->count = 4;
 $server->name = 'meows';
 $server->group = 'meows';
 $server->start();
-
