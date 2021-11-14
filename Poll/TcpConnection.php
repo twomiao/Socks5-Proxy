@@ -159,7 +159,7 @@ class TcpConnection
         static::$id_record++;
         $this->id = static::$id_record;
         \stream_set_blocking($this->socket, false);
-        TcpServer::$eventLoopClass->add($this->socket, LoopInterface::EV_READ, array($this, 'baseRead'));
+        TcpServer::$eventLoop->add($this->socket, LoopInterface::EV_READ, array($this, 'baseRead'));
         $this->maxPackageSize = static::$defaultMaxPackageSize;
         $this->maxSendBufferSize = static::$defaultMaxSendBufferSize;
         static::$connections[$this->id] = $this;
@@ -268,12 +268,12 @@ class TcpConnection
         if ($this->status === static::STATE_CLOSED) {
             return;
         }
-        TcpServer::$eventLoopClass->del($this->socket, LoopInterface::EV_READ);
-        TcpServer::$eventLoopClass->del($this->socket, LoopInterface::EV_WRITE);
+        TcpServer::$eventLoop->del($this->socket, LoopInterface::EV_READ);
+        TcpServer::$eventLoop->del($this->socket, LoopInterface::EV_WRITE);
         try {
             @fclose($this->socket);
         } catch (\Exception $e) {
-
+            
         } catch (\Error $e) {
 
         }
@@ -313,7 +313,8 @@ class TcpConnection
 
     /**
      * @param $send_buffer
-     * @param false $raw
+     * @param bool $raw
+     * @return bool|void
      */
     public function send($send_buffer, bool $raw = false)
     {
@@ -369,7 +370,7 @@ class TcpConnection
                 }
                 $this->writtenDataBuffer = $send_buffer;
             }
-            TcpServer::$eventLoopClass->add($this->socket, LoopInterface::EV_WRITE, [$this, 'baseWrite']);
+            TcpServer::$eventLoop->add($this->socket, LoopInterface::EV_WRITE, [$this, 'baseWrite']);
             $this->checkBufferWillFull();
             return;
         }
@@ -393,16 +394,16 @@ class TcpConnection
         // 发送数据完成
         if ($len === \strlen($this->writtenDataBuffer)) {
             $this->bytesWritten += $len;
-            TcpServer::$eventLoopClass->del($this->socket, LoopInterface::EV_WRITE);
+            TcpServer::$eventLoop->del($this->socket, LoopInterface::EV_WRITE);
             $this->writtenDataBuffer = '';
 
             if ($this->onBufferDrain) {
                 try {
                     \call_user_func($this->onBufferDrain, $this);
                 } catch (\Exception $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 } catch (\Error $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 }
             }
 
@@ -433,9 +434,9 @@ class TcpConnection
                 try {
                     \call_user_func($this->onError, $this, static::SEND_MSG_FAIL, 'send buffer full and drop package');
                 } catch (\Exception $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 } catch (\Error $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 }
             }
             return true;
@@ -453,9 +454,9 @@ class TcpConnection
                 try {
                     \call_user_func($this->onBufferFull, $this);
                 } catch (\Exception $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 } catch (\Error $e) {
-                    $this->tcpServer->stopWorkerAll(250);
+                    $this->tcpServer->stopAll(250);
                 }
             }
         }
@@ -496,7 +497,7 @@ class TcpConnection
     public function resumeRecv()
     {
         if ($this->isPaused) {
-            TcpServer::$eventLoopClass->add($this->socket, LoopInterface::EV_READ, array($this, 'baseRead'));
+            TcpServer::$eventLoop->add($this->socket, LoopInterface::EV_READ, array($this, 'baseRead'));
             $this->isPaused = false;
         }
     }
@@ -505,7 +506,7 @@ class TcpConnection
     {
         if ($this->isPaused === false) {
             // Pause receiving data
-            TcpServer::$eventLoopClass->del($this->socket, LoopInterface::EV_READ);
+            TcpServer::$eventLoop->del($this->socket, LoopInterface::EV_READ);
             $this->isPaused = true;
             // TCP缓冲区数据读取到内存缓冲区保存
             $this->baseRead($this->socket, false);

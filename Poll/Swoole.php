@@ -20,7 +20,7 @@ final class Swoole implements LoopInterface
     /**
      * @var array $_eventClass
      */
-    private array $_eventClass = array();
+    private array $_eventClass = [];
 
     /**
      * @var array $_timers
@@ -44,7 +44,7 @@ final class Swoole implements LoopInterface
      *
      * {@inheritdoc}
      *
-     * @see \Workerman\Events\EventInterface::add()
+     * @see LoopInterface::add()
      */
     public function add($fd, $flag, $func, $args = array())
     {
@@ -106,7 +106,7 @@ final class Swoole implements LoopInterface
      *
      * {@inheritdoc}
      *
-     * @see \Workerman\Events\EventInterface::del()
+     * @see LoopInterface::del()
      */
     public function del($fd, $flag)
     {
@@ -139,7 +139,7 @@ final class Swoole implements LoopInterface
      *
      * {@inheritdoc}
      *
-     * @see \Workerman\Events\EventInterface::loop()
+     * @see LoopInterface::clearAllTimer()
      */
     public function clearAllTimer()
     {
@@ -153,7 +153,7 @@ final class Swoole implements LoopInterface
      *
      * {@inheritdoc}
      *
-     * @see \Workerman\Events\EventInterface::destroy()
+     * @see LoopInterface::destroy()
      */
     public function destroy()
     {
@@ -168,7 +168,7 @@ final class Swoole implements LoopInterface
     /**
      * {@inheritdoc}
      *
-     * @see \Workerman\Events\EventInterface::loop()
+     * @see LoopInterface::loop()
      */
     public function loop()
     {
