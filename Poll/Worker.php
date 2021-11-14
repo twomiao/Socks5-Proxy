@@ -3,7 +3,7 @@ namespace Swoman\Poll;
 
 use Swoole\Process;
 
-class TcpServer
+class Worker
 {
     use EventServer;
 
@@ -155,16 +155,17 @@ class TcpServer
     /**
      * @var string $processTitle
      */
-    protected static string $processTitle = 'Swoman';
+    protected static string $processTitle = 'start.php';
 
     /**
      * @param string $socket_name
      * @param array $context_option
+     * @throws \Exception
      */
     public function __construct(string $socket_name = '', array $context_option = [])
     {
         if (PHP_OS !== 'Linux') {
-            throw new \RuntimeException(sprintf("Cannot run on [%s] operating system.", PHP_OS));
+            throw new \Exception(sprintf("Cannot run on [%s] operating system.", PHP_OS));
         }
 
         // Context for socket.
@@ -294,7 +295,7 @@ class TcpServer
                     try {
                         call_user_func($this->onWorkerStop, $this);
                     } catch (\Throwable $e) {
-                        exit($e->getCode());
+                        $this->stopAll(255);
                     }
                 }
                 $this->unlisten();
@@ -373,7 +374,7 @@ class TcpServer
             $this->run();
         }, static::$daemonize, 0, false);
         if (!$pid = $process->start()) { // start trigger error.
-            exit(swoole_strerror(swoole_errno()));
+            exit("Fork fail: ".swoole_strerror(swoole_errno()));
         }
         // for master
         static::$pidMap[$pid] = $pid;
@@ -417,9 +418,9 @@ HELP;
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit("Swoman [ {$start_file} ] is already running.\n");
+            exit("start.php [ {$start_file} ] is already running.\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit("Swoman [ {$start_file} ] not run.\n");
+            exit("start.php [ {$start_file} ] not run.\n");
         }
 
         switch ($command) {
@@ -429,26 +430,26 @@ HELP;
                     static::$daemonize = true;
                     $mode_str = 'in DAEMON mode';
                 }
-                echo "Swoman {$mode_str}" . PHP_EOL;
+                echo "start.php {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo "Swoman is gracefully stopping ...\n";
+                    echo "start.php is gracefully stopping ...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo "'Swoman is stopping ...'\n";
+                    echo "'start.php is stopping ...'\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = \posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit("Swoman [ {$start_file} ] stop success.\n");
+                        exit("start.php [ {$start_file} ] stop success.\n");
                     }
 
                     if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit("Swoman [ {$start_file} ] stop fail.\n");
+                        exit("start.php [ {$start_file} ] stop fail.\n");
                     }
                     $master_pid && \posix_kill($master_pid, $sig);
                     \usleep(100000);
@@ -493,7 +494,7 @@ HELP;
                 if (\file_exists(static::$pidFile)) {
                     @\unlink(static::$pidFile);
                 }
-                echo "Swoman has been stopped.\n";
+                echo "start.php has been stopped.\n";
                 // 主进程自定义清理工作
                 if ($this->onMasterStop) {
                     \call_user_func($this->onMasterStop);
@@ -501,6 +502,31 @@ HELP;
                 exit(0);
             }
         }
+    }
+
+    /**
+     * @param int $signal
+     * @param int $masterPid
+     * @return bool
+     */
+    protected static function stopWorkers($signal = SIGTERM, $masterPid = 0):bool
+    {
+       $masterPid = static::$masterPid ? static::$masterPid : $masterPid;
+       return @\posix_kill($masterPid, $signal);
+    }
+
+    /**
+     * @param \Throwable|null $e
+     */
+    public static function stopAllExcept(\Throwable $e = null) {
+        if ($e)
+        {
+            $error = $e instanceof Error ? 'Error' : 'Exception';
+
+            echo sprintf("Terminate process [%s], {$error} message:%s,error code:%s.",getmypid(),
+                    $e->getMessage(), $e->getCode()).PHP_EOL;
+        }
+        static::stopWorkers();
     }
 
     protected function run()
@@ -523,9 +549,9 @@ HELP;
                 call_user_func($this->onWorkerStart, $this);
             }
         } catch (\Exception $e) {
-            $this->stopAll($e->getCode());
-        } catch (\Error $e) {
-            $this->stopAll($e->getCode());
+            static::stopAllExcept($e);
+        } catch (\Error $error) {
+            static::stopAllExcept($error);
         }
 
         static::$eventLoop->loop();
@@ -539,15 +565,15 @@ HELP;
     }
 
     /**
-     * Save pid.
+     * Save pid
      *
-     * @throws \RuntimeException
+     * @throws \Exception
      */
     protected function saveMasterPid()
     {
         static::$masterPid = \posix_getpid();
         if (false === \file_put_contents(static::$pidFile, static::$masterPid)) {
-            throw new \RuntimeException('Failed to save the main process file:' . static::$pidFile);
+            throw new \Exception('Failed to save the main process file:' . static::$pidFile);
         }
     }
 
