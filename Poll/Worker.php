@@ -418,9 +418,9 @@ HELP;
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit("start.php [ {$start_file} ] is already running.\n");
+            exit("Swoman [ {$start_file} ] is already running.\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit("start.php [ {$start_file} ] not run.\n");
+            exit("Swoman [ {$start_file} ] not run.\n");
         }
 
         switch ($command) {
@@ -430,26 +430,26 @@ HELP;
                     static::$daemonize = true;
                     $mode_str = 'in DAEMON mode';
                 }
-                echo "start.php {$mode_str}" . PHP_EOL;
+                echo "Swoman {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo "start.php is gracefully stopping ...\n";
+                    echo "Swoman is gracefully stopping ...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo "'start.php is stopping ...'\n";
+                    echo "'Swoman is stopping ...'\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = \posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit("start.php [ {$start_file} ] stop success.\n");
+                        exit("Swoman [ {$start_file} ] stop success.\n");
                     }
 
                     if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit("start.php [ {$start_file} ] stop fail.\n");
+                        exit("Swoman [ {$start_file} ] stop fail.\n");
                     }
                     $master_pid && \posix_kill($master_pid, $sig);
                     \usleep(100000);
