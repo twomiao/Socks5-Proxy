@@ -155,7 +155,7 @@ class Worker
     /**
      * @var string $processTitle
      */
-    protected static string $processTitle = 'start.php';
+    protected static string $processTitle = 'SwoMan';
 
     /**
      * @param string $socket_name
@@ -295,7 +295,7 @@ class Worker
                     try {
                         call_user_func($this->onWorkerStop, $this);
                     } catch (\Throwable $e) {
-                        $this->stopAll(255);
+                        static::stopAllExcept($e);
                     }
                 }
                 $this->unlisten();
@@ -347,11 +347,7 @@ class Worker
     protected static function workerCount(int $count = 5): int
     {
         if ($count < 1) {
-            if (\function_exists('swoole_cpu_num')) {
-                return \swoole_cpu_num();
-            }
-
-            return 1;
+            return \function_exists('swoole_cpu_num') ? \swoole_cpu_num() : 1;
         }
         return $count;
     }
@@ -370,7 +366,7 @@ class Worker
             \swoole_set_process_name(static::$processTitle . ': worker process');
             $this->workerId = $workerId;
             $this->setUserAndGroup();
-            echo '工作进程已启动: ' . getmypid() . PHP_EOL;
+            echo 'Started worker: ' . getmypid() . PHP_EOL;
             $this->run();
         }, static::$daemonize, 0, false);
         if (!$pid = $process->start()) { // start trigger error.
@@ -418,9 +414,9 @@ HELP;
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit("Swoman [ {$start_file} ] is already running.\n");
+            exit("SwoMan [ {$start_file} ] is already running.\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit("Swoman [ {$start_file} ] not run.\n");
+            exit("SwoMan [ {$start_file} ] not run.\n");
         }
 
         switch ($command) {
@@ -430,26 +426,26 @@ HELP;
                     static::$daemonize = true;
                     $mode_str = 'in DAEMON mode';
                 }
-                echo "Swoman {$mode_str}" . PHP_EOL;
+                echo "SwoMan {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo "Swoman is gracefully stopping ...\n";
+                    echo "SwoMan is gracefully stopping ...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo "'Swoman is stopping ...'\n";
+                    echo "'SwoMan is stopping ...'\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = \posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit("Swoman [ {$start_file} ] stop success.\n");
+                        exit("SwoMan [ {$start_file} ] stop success.\n");
                     }
 
                     if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit("Swoman [ {$start_file} ] stop fail.\n");
+                        exit("SwoMan [ {$start_file} ] stop fail.\n");
                     }
                     $master_pid && \posix_kill($master_pid, $sig);
                     \usleep(100000);
@@ -494,7 +490,7 @@ HELP;
                 if (\file_exists(static::$pidFile)) {
                     @\unlink(static::$pidFile);
                 }
-                echo "start.php has been stopped.\n";
+                echo "SwoMan has been stopped.\n";
                 // 主进程自定义清理工作
                 if ($this->onMasterStop) {
                     \call_user_func($this->onMasterStop);
@@ -553,7 +549,6 @@ HELP;
         } catch (\Error $error) {
             static::stopAllExcept($error);
         }
-
         static::$eventLoop->loop();
     }
 
