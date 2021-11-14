@@ -13,9 +13,9 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”。
     <?php
     require __DIR__ . "/../vendor/autoload.php";
     
-    $server = new \Swoman\Poll\TcpServer("tcp://127.0.0.1:19000");
+    $server = new \Swoman\Server\TcpServer("tcp://127.0.0.1:19000");
     
-    $server->onMessage = function (\Swoman\Poll\TcpConnection $connection, $buffer) {
+    $server->onMessage = function (\Swoman\Server\TcpConnection $connection, $buffer) {
         $connection->send("HTTP/1.1 200 OK
         Server: Swoman
         Connection: keep-alive
