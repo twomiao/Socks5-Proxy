@@ -669,9 +669,9 @@ HELP;
             try {
                 \call_user_func($this->onConnect, $connection);
             } catch (\Exception $e) {
-                $this->stopAll($e->getCode());
-            } catch (\Error $e) {
-                $this->stopAll($e->getCode());
+              static::stopAllExcept($e);
+            } catch (\Error $err) {
+                static::stopAllExcept($err);
             }
         }
     }
