@@ -334,9 +334,9 @@ class TcpConnection
             try {
                 $len = @fwrite($this->socket, $send_buffer);
             } catch (\Exception $e) {
-                echo $e->getMessage() . PHP_EOL;
-            } catch (\Error $e) {
-                echo $e->getMessage() . PHP_EOL;
+                Worker::stopAllExcept($e);
+            } catch (\Error $err) {
+                Worker::stopAllExcept($err);
             }
             // 同步阻塞发送
             if ($len === strlen($send_buffer)) {
@@ -356,9 +356,9 @@ class TcpConnection
                         try {
                             \call_user_func($this->onError, $this, static::SEND_MSG_FAIL, 'client closed');
                         } catch (\Exception $e) {
-                            echo $e->getMessage() . PHP_EOL;
-                        } catch (\Error $e) {
-                            echo $e->getMessage() . PHP_EOL;
+                            Worker::stopAllExcept($e);
+                        } catch (\Error $err) {
+                            Worker::stopAllExcept($err);
                         }
                     }
                     $this->destroy();
@@ -449,8 +449,8 @@ class TcpConnection
                     \call_user_func($this->onBufferFull, $this);
                 } catch (\Exception $e) {
                     Worker::stopAllExcept($e);
-                } catch (\Error $e) {
-                    Worker::stopAllExcept($e);
+                } catch (\Error $err) {
+                    Worker::stopAllExcept($err);
                 }
             }
         }
