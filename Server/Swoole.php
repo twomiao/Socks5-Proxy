@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Poll;
+namespace Swoman\Server;
 
 use Swoole\Event;
 use Swoole\Timer;

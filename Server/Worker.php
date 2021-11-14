@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Poll;
+namespace Swoman\Server;
 
 use Swoole\Process;
 
@@ -414,9 +414,9 @@ HELP;
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit("SwoMan [ {$start_file} ] is already running.\n");
+            exit(self::$processTitle." [ {$start_file} ] is already running.\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit("SwoMan [ {$start_file} ] not run.\n");
+            exit(self::$processTitle." [ {$start_file} ] not run.\n");
         }
 
         switch ($command) {
@@ -426,26 +426,26 @@ HELP;
                     static::$daemonize = true;
                     $mode_str = 'in DAEMON mode';
                 }
-                echo "SwoMan {$mode_str}" . PHP_EOL;
+                echo self::$processTitle." {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo "SwoMan is gracefully stopping ...\n";
+                    echo self::$processTitle." is gracefully stopping ...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo "'SwoMan is stopping ...'\n";
+                    echo "'".self::$processTitle." is stopping ...'\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = \posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit("SwoMan [ {$start_file} ] stop success.\n");
+                        exit(self::$processTitle." [ {$start_file} ] stop success.\n");
                     }
 
                     if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit("SwoMan [ {$start_file} ] stop fail.\n");
+                        exit(self::$processTitle." [ {$start_file} ] stop fail.\n");
                     }
                     $master_pid && \posix_kill($master_pid, $sig);
                     \usleep(100000);
@@ -478,22 +478,24 @@ HELP;
                         $this->forkOneWorker($workerId);
                     }
                 }
-                // 统计worker 退出次数
-                // 清除主进程残留数据
                 unset(static::$pidMap[$pid]);
             }
 
             // for master clear data
             if (static::$stateCurrent === static::STATE_STOPPED && empty(static::$pidMap)) {
-                // 因为不支持UnixSocket监听，因此不考虑删除.sock文件
                 \clearstatcache(static::$pidFile);
                 if (\file_exists(static::$pidFile)) {
                     @\unlink(static::$pidFile);
                 }
-                echo "SwoMan has been stopped.\n";
-                // 主进程自定义清理工作
+                echo self::$processTitle." has been stopped.\n";
                 if ($this->onMasterStop) {
-                    \call_user_func($this->onMasterStop);
+                    try {
+                        \call_user_func($this->onMasterStop);
+                    }catch (\Exception $e) {
+                        static::stopAllExcept($e);
+                    }catch (\Error $err) {
+                        static::stopAllExcept($err);
+                    }
                 }
                 exit(0);
             }
@@ -519,7 +521,7 @@ HELP;
         {
             $error = $e instanceof Error ? 'Error' : 'Exception';
 
-            echo sprintf("Terminate process [%s], {$error} message:%s,error code:%s.",getmypid(),
+            echo sprintf("Terminate process [%s], {$error} message:%s,{$error} code:%s.",getmypid(),
                     $e->getMessage(), $e->getCode()).PHP_EOL;
         }
         static::stopWorkers();

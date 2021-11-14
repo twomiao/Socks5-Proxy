@@ -1,8 +1,8 @@
 <?php
-namespace Swoman\Poll\Protocols;
+namespace Swoman\Server\Protocols;
 
-use Swoman\Poll\ProtocolInterface;
-use Swoman\Poll\TcpConnection;
+use Swoman\Server\ProtocolInterface;
+use Swoman\Server\TcpConnection;
 
 /**
  * Frame Protocol.

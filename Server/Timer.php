@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Poll;
+namespace Swoman\Server;
 
 class Timer
 {

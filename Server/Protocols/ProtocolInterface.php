@@ -1,7 +1,7 @@
 <?php
-namespace Swoman\Poll;
+namespace Swoman\Server;
 
-use Swoman\Poll\TcpConnection;
+use Swoman\Server\TcpConnection;
 
 interface ProtocolInterface
 {

@@ -1,14 +1,14 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-$server = new \Swoman\Poll\Worker('tcp://127.0.0.1:19000');
+$server = new \Swoman\Server\Worker('tcp://127.0.0.1:19000');
 
 $server->onWorkerStart = function ()
 {
 //  throw new Exception('测试');
 };
 
-$server->onMessage = function (\Swoman\Poll\TcpConnection $connection, $buffer)
+$server->onMessage = function (\Swoman\Server\TcpConnection $connection, $buffer)
 {
   $connection->send("HTTP/1.1 200 OK
 Server: Swoman
