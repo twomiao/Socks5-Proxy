@@ -2,14 +2,14 @@
 
 Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”。
 
-## 学习收获：
+## 目标：
 - 为了探索Workerman 实现原理，使用Swoole4 + Pcntl 实现核心功能。
 - 为了更方便掌握原理，实现的单实例单端口多进程高性能服务器、不支持单进程多端口，当然这并不影响，掌握它的原理。
 - 为了更方便解决实际遇见的问题，拥有改造Workerman的能力。
 
 ## 测试配置：
     CPU I7U 8 核心 + 16GB RAM
-## HttpServer demo：
+## Http Server demo：
     <?php
     require __DIR__ . '/vendor/autoload.php';
 
