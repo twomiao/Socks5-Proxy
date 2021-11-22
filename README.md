@@ -9,7 +9,7 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”。
 
 ## 笔记本配置：
     CPU I7U 8 核心 + 16GB RAM
-## 样本代码：
+## HttpServer demo：
     <?php
     require __DIR__ . "/../vendor/autoload.php";
     
