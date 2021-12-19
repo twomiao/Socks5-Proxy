@@ -19,5 +19,7 @@ trait EventServer
 
     public  ?\Closure $onConnect = null;
 
-    public  ?\Closure $onMasterStop = null;
+    public  static ?\Closure $onMasterStart = null;
+
+    public static ?\Closure $onMasterStop = null;
 }

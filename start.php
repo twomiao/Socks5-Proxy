@@ -17,13 +17,13 @@ $worker->onMessage = function (\Swoman\Server\TcpConnection $connection, $buffer
     // 处理http 请求逻辑，调用控制器和方法(路由)，返回给客户端数据
     // 不过我未实现http1.1协议
   $connection->send("HTTP/1.1 200 OK
-Server: Swoman HttpServer
+Server: Socks5-Proxy HttpServer
 Connection: keep-alive
 Content-Type: text/html;charset=utf-8
 Content-Length: 12\r\n
-".str_repeat('Hello,Swoman', 400));
+".str_repeat('Hello,Socks5-Proxy', 400));
 };
-$worker->name = 'Swoman Http Server';
+$worker->name = 'Socks5-Proxy Http Server';
 $worker->user = 'meows';
 $worker->group = 'meows';
 $worker->count = 0;

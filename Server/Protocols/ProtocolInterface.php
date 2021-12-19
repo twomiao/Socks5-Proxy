@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Server;
+namespace Swoman\Server\Protocols;
 
 use Swoman\Server\TcpConnection;
 

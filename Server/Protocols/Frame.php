@@ -1,7 +1,6 @@
 <?php
 namespace Swoman\Server\Protocols;
 
-use Swoman\Server\ProtocolInterface;
 use Swoman\Server\TcpConnection;
 
 /**
