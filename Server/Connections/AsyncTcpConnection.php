@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Server\Connections;
+namespace Socks5\Server\Connections;
 
 use Swoman\Server\LoopInterface;
 use Swoman\Server\TcpConnection;

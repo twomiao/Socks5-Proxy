@@ -1,9 +1,9 @@
 <?php
-namespace Swoman\Server\Protocols;
+namespace Socks5\Server\Protocols;
 
-use Swoman\Server\TcpConnection;
-use Swoman\Server\RequestState;
-use Swoman\Server\Worker;
+use Socks5\Server\TcpConnection;
+use Socks5\Server\RequestState;
+use Socks5\Server\Worker;
 
 class Socks5 implements ProtocolInterface
 {

@@ -1,9 +1,9 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
-use Swoman\Server\Protocols\Socks5;
-use Swoman\Server\Worker;
-use Swoman\Server\TcpConnection;
-use Swoman\Server\RequestState;
+use Socks5\Server\Protocols\Socks5;
+use Socks5\Server\Worker;
+use Socks5\Server\TcpConnection;
+use Socks5\Server\RequestState;
 
 Worker::$onMasterStart = function() {
     echo " ____             _        ____        ____
@@ -41,4 +41,4 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
 
 
 };
-//$worker->start();
+$worker->start();

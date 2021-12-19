@@ -1,7 +1,7 @@
 <?php
-namespace Swoman\Server\Protocols;
+namespace Socks5\Server\Protocols;
 
-use Swoman\Server\TcpConnection;
+use Socks5\Server\TcpConnection;
 
 interface ProtocolInterface
 {

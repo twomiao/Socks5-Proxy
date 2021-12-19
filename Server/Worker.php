@@ -1,7 +1,7 @@
 <?php
-namespace Swoman\Server;
+namespace Socks5\Server;
 
-use Swoman\Server\Protocols\ProtocolInterface;
+use Socks5\Server\Protocols\ProtocolInterface;
 use Swoole\Process;
 
 class Worker

@@ -1,5 +1,5 @@
 <?php
-namespace Swoman\Server;
+namespace Socks5\Server;
 
 /**
  *
