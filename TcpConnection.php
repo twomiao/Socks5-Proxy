@@ -1,8 +1,7 @@
 <?php
+namespace Socks5;
 
-namespace Socks5\Server;
-
-use Socks5\Server\Protocols\ProtocolInterface;
+use Socks5\Protocols\ProtocolInterface;
 
 /**
  *

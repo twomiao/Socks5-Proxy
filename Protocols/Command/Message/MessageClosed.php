@@ -1,5 +1,5 @@
 <?php
-namespace Socks5\Server\Protocols\Command\Message;
+namespace Socks5\Protocols\Command\Message;
 
 class MessageClosed extends MessageSock
 {

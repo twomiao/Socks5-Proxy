@@ -1,7 +1,7 @@
 <?php
-namespace Socks5\Server\Protocols\Command\Message;
+namespace Socks5\Protocols\Command\Message;
 
-use Socks5\Server\Protocols\Command\AddressGet;
+use Socks5\Protocols\Command\AddressGet;
 
 class MessageSock
 {

@@ -1,14 +1,14 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-use Socks5\Server\Protocols\Command\Command;
-use Socks5\Server\Protocols\Socks5;
-use Socks5\Server\Worker;
-use Socks5\Server\TcpConnection;
-use Socks5\Server\Protocols\Command\InitCommand;
-use Socks5\Server\Protocols\Command\Message\MessageClosed;
-use Socks5\Server\Protocols\Command\Message\MessageSock;
-use Socks5\Server\Connection\AsyncTcpConnection;
+use Socks5\Protocols\Command\Command;
+use Socks5\Protocols\Socks5;
+use Socks5\Worker;
+use Socks5\TcpConnection;
+use Socks5\Protocols\Command\InitCommand;
+use Socks5\Protocols\Command\Message\MessageClosed;
+use Socks5\Protocols\Command\Message\MessageSock;
+use Socks5\Connection\AsyncTcpConnection;
 
 Worker::$onMasterStart = function () {
     echo " ____                                       ____             _          ____

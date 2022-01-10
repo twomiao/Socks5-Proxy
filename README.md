@@ -14,7 +14,7 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/
 > SOCKS5还支持各种认证机制和域名解析（DNS）。<br/>
 
 ## 安装使用?
-1. 安装扩展pcntl+swoole<br/>
+1. 安装扩展 linux + pcntl + swoole<br/>
 2. 个人电脑安装SOCKS5客户端， “Proxifier”即可，将全部流量转发给服务器。<br/>
 3. php start_socks5.php start 启动代理服务<br/>
 

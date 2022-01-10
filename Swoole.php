@@ -1,5 +1,5 @@
 <?php
-namespace Socks5\Server;
+namespace Socks5;
 
 use Swoole\Event;
 use Swoole\Timer;

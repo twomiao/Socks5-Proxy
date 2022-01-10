@@ -1,5 +1,5 @@
 <?php
-namespace Socks5\Server\Protocols\Command;
+namespace Socks5\Protocols\Command;
 
 class Command
 {

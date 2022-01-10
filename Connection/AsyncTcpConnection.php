@@ -1,10 +1,10 @@
 <?php
-namespace Socks5\Server\Connection;
+namespace Socks5\Connection;
 
-use Socks5\Server\LoopInterface;
-use Socks5\Server\TcpConnection;
-use Socks5\Server\Timer;
-use Socks5\Server\Worker;
+use Socks5\LoopInterface;
+use Socks5\TcpConnection;
+use Socks5\Timer;
+use Socks5\Worker;
 
 class AsyncTcpConnection extends TcpConnection
 {

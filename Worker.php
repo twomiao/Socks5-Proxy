@@ -1,8 +1,8 @@
 <?php
 
-namespace Socks5\Server;
+namespace Socks5;
 
-use Socks5\Server\Protocols\ProtocolInterface;
+use Socks5\Protocols\ProtocolInterface;
 use Swoole\Process;
 
 class Worker
@@ -526,8 +526,7 @@ HELP;
         if ($e) {
             echo sprintf("Terminate process [%d] - %s\n", getmypid(), $e);
         }
-        if (!$signal)
-        {
+        if (!$signal) {
             $signal = \SIGINT;
         }
         @\posix_kill(getmypid(), $signal);
@@ -621,11 +620,11 @@ HELP;
         }
 
         if (empty(self::$pidFile)) {
-            self::$pidFile = __DIR__ . '/../' . self::$processTitle . '.pid';
+            self::$pidFile = __DIR__ . self::$processTitle . '.pid';
         }
 
         if (empty(self::$logFile)) {
-            self::$logFile = __DIR__ . '/../' . self::$processTitle . '.log';
+            self::$logFile = __DIR__ . self::$processTitle . '.log';
         }
 
         if (!\file_exists(self::$logFile)) {

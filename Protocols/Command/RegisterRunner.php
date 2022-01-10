@@ -1,8 +1,7 @@
 <?php
+namespace Socks5\Protocols\Command;
 
-namespace Socks5\Server\Protocols\Command;
-
-use Socks5\Server\TcpConnection;
+use Socks5\TcpConnection;
 
 /**
  * 命令执行器

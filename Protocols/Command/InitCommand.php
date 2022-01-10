@@ -1,10 +1,10 @@
 <?php
 
-namespace Socks5\Server\Protocols\Command;
+namespace Socks5\Protocols\Command;
 
-use Socks5\Server\Protocols\Socks5;
-use Socks5\Server\TcpConnection;
-use Socks5\Server\Worker;
+use Socks5\Protocols\Socks5;
+use Socks5\TcpConnection;
+use Socks5\Worker;
 
 /**
  * 初始化命令

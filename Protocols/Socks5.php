@@ -1,14 +1,14 @@
 <?php
 
-namespace Socks5\Server\Protocols;
+namespace Socks5\Protocols;
 
-use Socks5\Server\Protocols\Command\AddressGet;
-use Socks5\Server\Protocols\Command\Command;
-use Socks5\Server\Protocols\Command\Message\MessageClosed;
-use Socks5\Server\Protocols\Command\Message\MessageSock;
-use Socks5\Server\Protocols\Command\RegisterRunner;
-use Socks5\Server\TcpConnection;
-use Socks5\Server\Worker;
+use Socks5\Protocols\Command\AddressGet;
+use Socks5\Protocols\Command\Command;
+use Socks5\Protocols\Command\Message\MessageClosed;
+use Socks5\Protocols\Command\Message\MessageSock;
+use Socks5\Protocols\Command\RegisterRunner;
+use Socks5\TcpConnection;
+use Socks5\Worker;
 
 class Socks5 implements ProtocolInterface
 {
