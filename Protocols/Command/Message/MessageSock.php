@@ -9,7 +9,7 @@ class MessageSock
     public const IPV6 = 0x04;
     public const DNS = 0x03;
 
-    protected const SOCK_VER = 0x05;
+    public const SOCK_VER = 0x05;
     protected const ADDR_TYPE = 0x00;
 
     protected int $sock_ver = self::SOCK_VER;

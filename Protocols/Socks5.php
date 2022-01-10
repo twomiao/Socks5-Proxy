@@ -8,7 +8,6 @@ use Socks5\Protocols\Command\Message\MessageClosed;
 use Socks5\Protocols\Command\Message\MessageSock;
 use Socks5\Protocols\Command\RegisterRunner;
 use Socks5\TcpConnection;
-use Socks5\Worker;
 
 class Socks5 implements ProtocolInterface
 {

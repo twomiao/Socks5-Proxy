@@ -155,11 +155,6 @@ class Worker
     protected bool $pauseAccept = true;
 
     /**
-     * @var string $processTitle
-     */
-    public static string $processTitle = 'Socks5-Proxy';
-
-    /**
      * @param string $socket_name
      * @param array $context_option
      * @throws \Exception
@@ -179,6 +174,11 @@ class Worker
             $this->contextOption = \stream_context_create($context_option);
         }
     }
+
+    /**
+     * @var string $processTitle
+     */
+    public static string $processTitle = 'Socks5-Proxy';
 
     protected function unlisten()
     {
@@ -620,11 +620,11 @@ HELP;
         }
 
         if (empty(self::$pidFile)) {
-            self::$pidFile = __DIR__ . self::$processTitle . '.pid';
+            self::$pidFile = __DIR__ . '/' . self::$processTitle . '.pid';
         }
 
         if (empty(self::$logFile)) {
-            self::$logFile = __DIR__ . self::$processTitle . '.log';
+            self::$logFile = __DIR__ . '/' . self::$processTitle . '.log';
         }
 
         if (!\file_exists(self::$logFile)) {

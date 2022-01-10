@@ -56,7 +56,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
             $proxyClient = new AsyncTcpConnection(
                 "tcp://" . $message["dest_address"] . ":" . $message["port"]
             );
-            $proxyClient->onConnect = function ($proxyClient) use ($connection, $message) {
+            $proxyClient->onConnect = function (AsyncTcpConnection $proxyClient) use ($connection, $message) {
                 $connection->send(
                     new MessageSock(
                         Command::COMMAND_CONNECT_SUCCESS,
@@ -70,8 +70,22 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
                     $connection->send($data);
                 };
 
+                $proxyClient->onBufferFull = function (AsyncTcpConnection $proxyClient) {
+                    $proxyClient->pauseRecv();
+                };
+
+                $proxyClient->onBufferDrain = function (AsyncTcpConnection $proxyClient) {
+                    $proxyClient->resumeRecv();
+                };
+
                 $connection->onMessage = function (TcpConnection $connection, $data) use ($proxyClient) {
                     $proxyClient->send($data);
+                };
+                $connection->onBufferFull = function (TcpConnection $connection) {
+                    $connection->pauseRecv();
+                };
+                $connection->onBufferDrain = function (TcpConnection $connection) {
+                    $connection->resumeRecv();
                 };
 
                 $connection->onClose = function ($connection) use ($proxyClient) {

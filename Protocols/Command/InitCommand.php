@@ -2,6 +2,7 @@
 
 namespace Socks5\Protocols\Command;
 
+use Socks5\Protocols\Command\Message\MessageSock;
 use Socks5\Protocols\Socks5;
 use Socks5\TcpConnection;
 use Socks5\Worker;
@@ -29,6 +30,13 @@ class InitCommand extends AbstractCommand
         $offset = 0;
         $sock_ver = ord($buffer[$offset]);
         $offset++;
+
+        if($sock_ver !== MessageSock::SOCK_VER)
+        {
+            $connection->close("\x05\xff", true);
+            return 0;
+        }
+
         // 认证方法列表
         $method_count = ord($buffer[$offset]);
         $offset++;

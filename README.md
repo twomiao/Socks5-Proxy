@@ -22,14 +22,14 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/
     <?php
     require __DIR__ . '/vendor/autoload.php';
     
-    use Socks5\Server\Protocols\Command\Command;
-    use Socks5\Server\Protocols\Socks5;
-    use Socks5\Server\Worker;
-    use Socks5\Server\TcpConnection;
-    use Socks5\Server\Protocols\Command\InitCommand;
-    use Socks5\Server\Protocols\Command\Message\MessageClosed;
-    use Socks5\Server\Protocols\Command\Message\MessageSock;
-    use Socks5\Server\Connection\AsyncTcpConnection;
+    use Socks5\Protocols\Command\Command;
+    use Socks5\Protocols\Socks5;
+    use Socks5\Worker;
+    use Socks5\TcpConnection;
+    use Socks5\Protocols\Command\InitCommand;
+    use Socks5\Protocols\Command\Message\MessageClosed;
+    use Socks5\Protocols\Command\Message\MessageSock;
+    use Socks5\Connection\AsyncTcpConnection;
     
     Worker::$onMasterStart = function () {
         echo " ____                                       ____             _          ____
@@ -77,7 +77,7 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/
                 $proxyClient = new AsyncTcpConnection(
                     "tcp://" . $message["dest_address"] . ":" . $message["port"]
                 );
-                $proxyClient->onConnect = function ($proxyClient) use ($connection, $message) {
+                $proxyClient->onConnect = function (AsyncTcpConnection $proxyClient) use ($connection, $message) {
                     $connection->send(
                         new MessageSock(
                             Command::COMMAND_CONNECT_SUCCESS,
@@ -91,8 +91,22 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/
                         $connection->send($data);
                     };
     
+                    $proxyClient->onBufferFull = function (AsyncTcpConnection $proxyClient) {
+                        $proxyClient->pauseRecv();
+                    };
+    
+                    $proxyClient->onBufferDrain = function (AsyncTcpConnection $proxyClient) {
+                        $proxyClient->resumeRecv();
+                    };
+    
                     $connection->onMessage = function (TcpConnection $connection, $data) use ($proxyClient) {
                         $proxyClient->send($data);
+                    };
+                    $connection->onBufferFull = function (TcpConnection $connection) {
+                        $connection->pauseRecv();
+                    };
+                    $connection->onBufferDrain = function (TcpConnection $connection) {
+                        $connection->resumeRecv();
                     };
     
                     $connection->onClose = function ($connection) use ($proxyClient) {
