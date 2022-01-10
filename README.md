@@ -1,106 +1,126 @@
-## Swoman Http Server 
+## Swoman Socks5
+Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/>
+**仅实现任意TCP流量代理**，采用SOCKS5 协议实现，故“Swoman Socks5”。
 
-Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”。
-
-## 目标：
+## 未知力量的渴望：
 - 为了探索Workerman 实现原理，使用Swoole4 + Pcntl 实现核心功能。
 - 为了更方便掌握原理，实现的单实例单端口多进程高性能服务器、不支持单进程多端口，当然这并不影响，掌握它的原理。
 - 为了更方便解决实际遇见的问题，拥有改造Workerman的能力。
 
-## 测试配置：
-    CPU I7U 8 核心 + 16GB RAM
-## Http Server demo：
+## Socks5 协议
+> SOCKS是一种网络传输协议，主要用于客户端与外网服务器之间通讯的中间传递。<br/>
+> 当客户端要访问外部的服务器时，就跟SOCKS代理服务器连接。这个代理服务器控制客户端访问外网的资格。<br/>
+> SOCKS5支持TCP和UDP应用。<br/>
+> 但是由于SOCKS5还支持各种认证机制和域名解析（DNS）也就是说，SOCKS5可以支持SOCKS4支持的任何东西，但它与SOCKS4不一样。<br/>
+
+## 安装使用?
+**1.** 安装扩展pcntl+swoole<br/>
+**2.** 个人电脑安装SOCKS5客户端， “Proxifier”即可，将全部流量转发给服务器。<br/>
+**3.** php start_socks5.php start 启动代理服务<br/>
+
+## Socks5 Run??：
     <?php
     require __DIR__ . '/vendor/autoload.php';
-
-    $worker = new \Swoman\Server\Worker('tcp://127.0.0.1:19000');
     
-    $worker->onWorkerStart = function (\Swoman\Server\Worker $worker)
-    {
-        // 加载Symfony Laravel ThinkPHP 等Web框架
-        // $app = new \think\App();
-        // $worker->onMessage = [$app, 'onMessage'];
+    use Socks5\Server\Protocols\Command\Command;
+    use Socks5\Server\Protocols\Socks5;
+    use Socks5\Server\Worker;
+    use Socks5\Server\TcpConnection;
+    use Socks5\Server\Protocols\Command\InitCommand;
+    use Socks5\Server\Protocols\Command\Message\MessageClosed;
+    use Socks5\Server\Protocols\Command\Message\MessageSock;
+    use Socks5\Server\Connection\AsyncTcpConnection;
     
-        // 推荐: 使用Workerman 作者开发的 常驻内存、高性能 Web 应用框架 https://gitee.com/walkor/webman
+    Worker::$onMasterStart = function () {
+        echo " ____                                       ____             _          ____
+    / ___|_      _____  _ __ ___   __ _ _ __   / ___|  ___   ___| | _____  | ___|
+    \___ \ \ /\ / / _ \| '_ ` _ \ / _` | '_ \  \___ \ / _ \ / __| |/ / __| |___ \
+     ___) \ V  V / (_) | | | | | | (_| | | | |  ___) | (_) | (__|   <\__ \  ___) |
+    |____/ \_/\_/ \___/|_| |_| |_|\__,_|_| |_| |____/ \___/ \___|_|\_\___/ |____/
+    \n{ Socks5 } 多进程、高性能Socks5代理服务器\n";
+        Worker::debug('Master started success.');
     };
     
-    $worker->onMessage = function (\Swoman\Server\TcpConnection $connection, $buffer)
-    {
-        // 处理http 请求逻辑，调用控制器和方法(路由)，返回给客户端数据
-        // 不过我未实现http1.1协议
-        $connection->send("HTTP/1.1 200 OK
-            Server: Swoman HttpServer
-            Connection: keep-alive
-            Content-Type: text/html;charset=utf-8
-            Content-Length: 12\r\n
-            ".str_repeat('Hello,Swoman', 400));
+    Worker::$processTitle = 'Socks5-Server';
+    $worker = new Worker('tcp://0.0.0.0:1090');
+    $worker->layerProtocol = Socks5::class;
+    $worker->user = 'meows';
+    $worker->group = 'meows';
+    $worker->count = 16;
+    
+    $worker->onWorkerStart = function () {
+        Worker::debug('Worker started success.');
+    };
+    
+    $worker->onConnect = function (TcpConnection $connection) {
+        if (!isset($connection->state)) {
+            $connection->state = InitCommand::COMMAND;
+        }
+        $connection->onSocks5Auth = function ($username, $password) {
+            return $password === 'pass';
         };
-        $worker->name = 'Swoman Http Server';
-        $worker->user = 'meows';
-        $worker->group = 'meows';
-        $worker->count = 0;
-        $worker->start();
-    }
+    };
+    
+    $worker->onMessage = function (TcpConnection $connection, $message) {
+    //    Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " 客户端代理数据 " . $message);
+        $message = json_decode($message, true);
+        if (!$message) {
+            $connection->close(
+                new MessageClosed(Command::COMMAND_SERVER_ERROR, '0.0.0.0', '0')
+            );
+            return;
+        }
+        var_dump($message);
+    
+        switch ($command = $message['command']) {
+            case 'CONNECT':
+                $proxyClient = new AsyncTcpConnection(
+                    "tcp://" . $message["dest_address"] . ":" . $message["port"]
+                );
+                $proxyClient->onConnect = function ($proxyClient) use ($connection, $message) {
+                    $connection->send(
+                        new MessageSock(
+                            Command::COMMAND_CONNECT_SUCCESS,
+                            $connection->getClientIP(),
+                            $connection->getClientPort(),
+                            (int)$message['addr_type'],
+                        )
+                    );
+    
+                    $proxyClient->onMessage = function (AsyncTcpConnection $proxyClient, $data) use ($connection) {
+                        $connection->send($data);
+                    };
+    
+                    $connection->onMessage = function (TcpConnection $connection, $data) use ($proxyClient) {
+                        $proxyClient->send($data);
+                    };
+    
+                    $connection->onClose = function ($connection) use ($proxyClient) {
+                        $proxyClient->close();
+                    };
+    
+                    $proxyClient->onClose = function ($proxyClient) use ($connection) {
+                        $connection->close();
+                    };
+                };
+    
+                $proxyClient->connect();
+                break;
+            default:
+                Worker::debug("[ {$command} ] 未知命令.");
+                $connection->close(
+                    new MessageClosed(Command::COMMAND_UNKNOWN, '0.0.0.0', '0')
+                );
+                break;
+        }
+    };
+    
+    $worker->onClose = function () {
+        var_dump('关闭连接.');
+    };
+    
+    $worker->start();
 
-## 性能测试结果：
+### License
 
-    root@LAPTOP-8LA5CDLH:/usr/local# ab -n 10000 -c 1500 -k http://127.0.0.1:19000/
-    This is ApacheBench, Version 2.3 <$Revision: 1807734 $>
-    Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-    Licensed to The Apache Software Foundation, http://www.apache.org/
-    
-    Benchmarking 127.0.0.1 (be patient)
-    Completed 1000 requests
-    Completed 2000 requests
-    Completed 3000 requests
-    Completed 4000 requests
-    Completed 5000 requests
-    Completed 6000 requests
-    Completed 7000 requests
-    Completed 8000 requests
-    Completed 9000 requests
-    Completed 10000 requests
-    Finished 10000 requests
-    
-    
-    Server Software:        Swoman
-    Server Hostname:        127.0.0.1
-    Server Port:            19000
-    
-    Document Path:          /
-    Document Length:        4800 bytes
-    
-    Concurrency Level:      1500
-    Time taken for tests:   0.981 seconds
-    Complete requests:      10000
-    Failed requests:        0
-    Keep-Alive requests:    10000
-    Total transferred:      49160000 bytes
-    HTML transferred:       48000000 bytes
-    Requests per second:    10188.77 [#/sec] (mean)
-    Time per request:       147.221 [ms] (mean)
-    Time per request:       0.098 [ms] (mean, across all concurrent requests)
-    Transfer rate:          48914.04 [Kbytes/sec] received
-    
-    Connection Times (ms)
-    min  mean[+/-sd] median   max
-    Connect:        0   22  55.1      0     229
-    Processing:    31   96  35.7     92     180
-    Waiting:       31   96  35.7     92     180
-    Total:         31  118  57.6    104     287
-    
-    Percentage of the requests served within a certain time (ms)
-    50%    104
-    66%    129
-    75%    151
-    80%    163
-    90%    212
-    95%    237
-    98%    265
-    99%    275
-    100%    287 (longest request)
-
-评价
----- 
-发送数据包逐渐增大，导致CPU性能负载。并发性能逐渐急速下降，不过这与PHP 底层计算能力相关。
-
+Apache License Version 2.0, http://www.apache.org/licenses/

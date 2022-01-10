@@ -1,4 +1,5 @@
 <?php
+
 namespace Socks5\Server;
 
 use Socks5\Server\Protocols\ProtocolInterface;
@@ -136,7 +137,7 @@ class Worker
     /**
      * @var string $socketName
      */
-    protected string $socketName;
+    protected string $socketName = '';
 
     /**
      * @var $contextOption
@@ -281,10 +282,10 @@ class Worker
 
         // for master
         if (static::$masterPid === \posix_getpid()) {
-            if(!$this->stopped) {
+            if (!$this->stopped) {
                 // 不使用Timer::add 因为退出事件循环，导致主进程退出较慢
                 \pcntl_alarm(self::SIG_KILL_TIMEOUT);
-                $handler = function(){
+                $handler = function () {
                     foreach (static::$pidMap as $worker_pid) {
                         $sigo = static::$smoothStop ? \SIGHUP : \SIGINT;
                         \posix_kill($worker_pid, $sigo);
@@ -293,7 +294,7 @@ class Worker
                         }
                     }
                 };
-                \pcntl_signal(\SIGALRM, $handler,false);
+                \pcntl_signal(\SIGALRM, $handler, false);
                 $this->stopped = true;
             }
         } else {
@@ -303,7 +304,7 @@ class Worker
                     try {
                         call_user_func($this->onWorkerStop, $this);
                     } catch (\Throwable $e) {
-                        static::exit($e);
+                        Worker::stopWorker($e);
                     }
                 }
                 $this->unlisten();
@@ -321,7 +322,7 @@ class Worker
                     static::$eventLoop->destroy();
                 }
                 try {
-                    exit(0);
+                    exit($code);
                 } catch (\Swoole\ExitException $e) {
 
                 }
@@ -362,19 +363,19 @@ class Worker
             }
             $processTitle = (!empty($this->name) && $this->name !== 'none') ?
                 ucfirst(strtolower($this->name)) : static::$processTitle;
-            \swoole_set_process_name( "{$processTitle}: worker process" );
+            \swoole_set_process_name("{$processTitle}: worker process");
             $this->workerId = $workerId;
             $this->setUserAndGroup();
             $this->run();
         }, static::$daemonize, 0, false);
         if (!$pid = $process->start()) { // start trigger error.
-            exit("Fork fail: ".swoole_strerror(swoole_errno()));
+            exit("Fork fail: " . swoole_strerror(swoole_errno()));
         }
         // for master
         static::$pidMap[$pid] = $pid;
         static::$idMap[$workerId] = $pid;
     }
-    
+
     protected function parseCommand()
     {
         global $argv;
@@ -382,7 +383,7 @@ class Worker
         $available_commands = ['stop' => ['-d', '-g'], 'start' => ['-d']];
         $usage = <<<HELP
 Usage: php Yourfile <command> [mode]
-Commands:
+AbstractCommand:
 start           Start worker in DEBUG mode.
                 Use mode -d to start in DAEMON mode.
 stop            Stop worker.
@@ -408,40 +409,41 @@ HELP;
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit(self::$processTitle." [ {$start_file} ] is already running.\n");
+            exit(self::$processTitle . " [ {$start_file} ] 服务已运行中!\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit(self::$processTitle." [ {$start_file} ] not run.\n");
+            exit(self::$processTitle . " [ {$start_file} ] 服务未运行!\n");
         }
 
         switch ($command) {
             case 'start':
-                $mode_str = 'in DEBUG mode';
+                $mode_str = '调试模式';
                 if ($mode === '-d') {
                     static::$daemonize = true;
-                    $mode_str = 'in DAEMON mode';
+                    $mode_str = '守护进程模式';
                 }
-                echo "[ ".self::$processTitle." ] {$mode_str}" . PHP_EOL;
+                echo "[ " . self::$processTitle . " ] | {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo self::$processTitle." is gracefully stopping ...\n";
+                    echo "[ " . self::$processTitle . " ] 正在平滑停止...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo self::$processTitle." is stopping ...\n";
+                    echo "[ " . self::$processTitle . " ] 正在停止...\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = @\posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit(self::$processTitle." [ {$start_file} ] stop success.\n");
+                        exit(self::$processTitle . " [ {$start_file} ] 停止服务成功.\n");
                     }
 
-                    if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit(self::$processTitle." [ {$start_file} ] stop fail.\n");
-                    }
                     $master_pid && \posix_kill($master_pid, $sig);
+
+                    if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
+                        exit(self::$processTitle . " [ {$start_file} ] 停止服务失败.\n");
+                    }
                     \usleep(100000);
                 }
             default:
@@ -455,19 +457,20 @@ HELP;
      */
     public static function debug(string $msg)
     {
-        $msg = \sprintf("[ %s ] |%s |pid-%d: %s", static::$processTitle, date('Y-m-d H:i:s'), \getmypid(), $msg);
+        $info = \sprintf("{ \033[0;32m%s\033[0m } | %s | {pid-%d}: %s", static::$processTitle, date('Y-m-d H:i:s'), \getmypid(), $msg);
         if (!static::$daemonize) {
-            echo $msg.PHP_EOL;
+            echo $info . PHP_EOL;
             return;
         }
+        $log_msg = \sprintf("{ %s } | %s | {pid-%d}: %s", static::$processTitle, date('Y-m-d H:i:s'), \getmypid(), $msg);
 
-        \file_put_contents(static::$logFile, $msg.PHP_EOL, FILE_APPEND | LOCK_EX);
+        \file_put_contents(static::$logFile, $log_msg . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     /**
      * 监控工作池
      */
-    protected function monitorWorkers() :void
+    protected function monitorWorkers(): void
     {
         static::$stateCurrent = static::STATE_RUNNING;
         while (1) {
@@ -499,14 +502,14 @@ HELP;
                 if (\file_exists(static::$pidFile)) {
                     @\unlink(static::$pidFile);
                 }
-                echo self::$processTitle." has been stopped.\n";
+                echo "[ " . self::$processTitle . " ] 停止成功\n";
                 if (static::$onMasterStop) {
                     try {
                         \call_user_func(static::$onMasterStop);
-                    }catch (\Exception $e) {
-                        static::exit($e);
-                    }catch (\Error $err) {
-                        static::exit($err);
+                    } catch (\Exception $e) {
+                        Worker::stopWorker($e);
+                    } catch (\Error $err) {
+                        Worker::stopWorker($err);
                     }
                 }
                 exit(0);
@@ -515,28 +518,31 @@ HELP;
     }
 
     /**
+     * @param \Throwable|null $e
+     * @param int|null $signal
+     */
+    public static function stopWorker(\Throwable $e = null, ?int $signal = null)
+    {
+        if ($e) {
+            echo sprintf("Terminate process [%d] - %s\n", getmypid(), $e);
+        }
+        if (!$signal)
+        {
+            $signal = \SIGINT;
+        }
+        @\posix_kill(getmypid(), $signal);
+    }
+
+
+    /**
      * @param int $signal
      * @param int $masterPid
      * @return bool
      */
-    protected static function stopWorkers($signal = SIGTERM, $masterPid = 0):bool
+    protected static function stopServer($signal = SIGTERM, $masterPid = 0): bool
     {
-       $masterPid = static::$masterPid ? static::$masterPid : $masterPid;
-       return @\posix_kill($masterPid, $signal);
-    }
-
-    /**
-     * @param \Throwable|null $e
-     */
-    public static function exit(\Throwable $e = null) {
-        if ($e)
-        {
-            $error = $e instanceof \Error ? 'Error' : 'Exception';
-
-            echo sprintf("Terminate process [%s], {$error} message:%s,{$error} code:%s.",getmypid(),
-                    $e->getMessage(), $e->getCode()).PHP_EOL;
-        }
-        static::stopWorkers();
+        $masterPid = static::$masterPid ? static::$masterPid : $masterPid;
+        return @\posix_kill($masterPid, $signal);
     }
 
     protected function run()
@@ -559,9 +565,9 @@ HELP;
                 call_user_func($this->onWorkerStart, $this);
             }
         } catch (\Exception $e) {
-            static::exit($e);
-        } catch (\Error $error) {
-            static::exit($error);
+            Worker::stopWorker($e);
+        } catch (\Error $err) {
+            Worker::stopWorker($err);
         }
         static::$eventLoop->loop();
     }
@@ -615,11 +621,11 @@ HELP;
         }
 
         if (empty(self::$pidFile)) {
-            self::$pidFile = __DIR__ . '/../'. self::$processTitle . '.pid';
+            self::$pidFile = __DIR__ . '/../' . self::$processTitle . '.pid';
         }
 
         if (empty(self::$logFile)) {
-            self::$logFile = __DIR__. '/../' . self::$processTitle . '.log';
+            self::$logFile = __DIR__ . '/../' . self::$processTitle . '.log';
         }
 
         if (!\file_exists(self::$logFile)) {
@@ -637,7 +643,8 @@ HELP;
         if (!empty(static::$onMasterStart)) {
             try {
                 call_user_func(static::$onMasterStart);
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
     }
 
@@ -674,20 +681,20 @@ HELP;
         $connection = new TcpConnection($new_socket, $remote_address);
         $this->connections[$connection->id] = $connection;
         $connection->onMessage = $this->onMessage;
-        $connection->tcpServer = $this;
+        $connection->worker = $this;
         $connection->onClose = $this->onClose;
         $connection->onError = $this->onError;
         $connection->onBufferDrain = $this->onBufferDrain;
         $connection->onBufferFull = $this->onBufferFull;
-        $connection->layerProtocol = $this->layerProtocol;
+        $connection->setLayerProtocol($this->layerProtocol);
 
         if ($this->onConnect) {
             try {
                 \call_user_func($this->onConnect, $connection);
             } catch (\Exception $e) {
-                static::exit($e);
+                Worker::stopWorker($e);
             } catch (\Error $err) {
-                static::exit($err);
+                Worker::stopWorker($err);
             }
         }
     }

@@ -1,14 +1,18 @@
 <?php
+
 namespace Socks5\Server;
+
+use Socks5\Server\Protocols\ProtocolInterface;
 
 /**
  *
  * @property $state string
  * @property $onSocks5Auth
+ * @property $host_len int
+ * @property $addr_type int
  * Class TcpConnection
  * @package Swoman\Server
  */
-
 class TcpConnection
 {
     use EventConnection;
@@ -48,11 +52,6 @@ class TcpConnection
      * @var int
      */
     protected const SEND_MSG_FAIL = 2;
-
-    /**
-     * @var Worker $server
-     */
-    protected Worker $server;
 
     /**
      * @var int $bytesRead
@@ -97,9 +96,9 @@ class TcpConnection
     public static int $defaultMaxPackageSize = 10485760;
 
     /**
-     * @var Worker $tcpServer
+     * @var null|Worker $worker
      */
-    public Worker $tcpServer;
+    public ?Worker $worker = null;
 
     /**
      * @var $_socket
@@ -132,14 +131,14 @@ class TcpConnection
     public int $id = 0;
 
     /**
-     * @var string $layerProtocol
-     */
-    public string $layerProtocol;
-
-    /**
      * @var int $currentPackageLength
      */
     public int $currentPackageLength = 0;
+
+    /**
+     * @var string $layerProtocol
+     */
+    protected string $layerProtocol = '';
 
     /**
      * @var array $connections
@@ -149,7 +148,7 @@ class TcpConnection
     /**
      * @var int[] $statistics
      */
-    public static $statistics = array(
+    public static array $statistics = array(
         'connection_count' => 0,
         'total_request' => 0,
         'throw_exception' => 0,
@@ -200,12 +199,14 @@ class TcpConnection
                     }
                 } else {
                     try {
-                        $layerProtocol = $this->layerProtocol;
                         /**
                          * @var $layerProtocol ProtocolInterface
                          */
+                        $layerProtocol = $this->layerProtocol;
                         $this->currentPackageLength = $layerProtocol::input($buffer, $this);
-                    } catch (\Throwable $e) {}
+                    } catch (\Throwable $e) {
+                            Worker::stopWorker($e);
+                    }
                     if ($this->currentPackageLength === 0) {
                         break;
                     } elseif ($this->currentPackageLength > 0 && $this->currentPackageLength <= $this->maxPackageSize) {
@@ -236,14 +237,16 @@ class TcpConnection
                      * @var $layerProtocol ProtocolInterface
                      */
                     $layerProtocol = $this->layerProtocol;
-                    \call_user_func($this->onMessage, $this, $layerProtocol::decode($request_buffer_data, $this));
+
+                    if ($this->layerProtocol && \class_exists($layerProtocol)) {
+                        \call_user_func($this->onMessage, $this, $layerProtocol::decode($request_buffer_data, $this));
+                    }
                 } catch (\Exception $e) {
-                   Worker::exit($e);
+                    Worker::stopWorker($e);
                 } catch (\Throwable $err) {
-                    Worker::exit($err);
-                } finally {
-                    return;
+                    Worker::stopWorker($err);
                 }
+                return;
             }
             return;
         }
@@ -251,7 +254,6 @@ class TcpConnection
         if ($this->readDataBuffer === '' || $this->isPaused) {
             return;
         }
-
         // Drop packets
         if (!$this->onMessage) {
             $this->readDataBuffer = '';
@@ -261,9 +263,9 @@ class TcpConnection
             // The original TCP data is handed over to the user for processing
             \call_user_func($this->onMessage, $this, $this->readDataBuffer);
         } catch (\Exception $e) {
-            Worker::exit($e);
+            Worker::stopWorker($e);
         } catch (\Error $err) {
-            Worker::exit($err);
+            Worker::stopWorker($err);
         }
         // Clean up the current connection data
         $this->readDataBuffer = '';
@@ -278,25 +280,26 @@ class TcpConnection
         Worker::$eventLoop->del($this->_socket, LoopInterface::EV_WRITE);
         try {
             @fclose($this->_socket);
-        } catch (\Throwable $e){};
+        } catch (\Throwable $e) {
+        };
         $this->_status = self::STATE_CLOSED;
         if ($this->onClose) {
             try {
                 call_user_func($this->onClose, $this);
             } catch (\Exception $e) {
-                Worker::exit($e);
+                Worker::stopWorker($e);
             } catch (\Error $err) {
-                Worker::exit($err);
+                Worker::stopWorker($err);
             }
         }
 
         if ($this->layerProtocol && \method_exists($this->layerProtocol, 'onClose')) {
             try {
-                \call_user_func(array($this->layerProtocol, 'onClose'), $this);
+                \call_user_func($this->layerProtocol . '::onClose', $this);
             } catch (\Exception $e) {
-                Worker::exit($e);
-            } catch (\Error $e) {
-                Worker::exit($e);
+                Worker::stopWorker($e);
+            } catch (\Error $err) {
+                Worker::stopWorker($err);
             }
         }
 
@@ -307,8 +310,8 @@ class TcpConnection
             /// clear event
             $this->clearCallEvent();
             // 从服务器中删除TCP连接实例
-            if ($this->tcpServer) {
-                unset($this->tcpServer->connections[$this->id]);
+            if ($this->worker) {
+                unset($this->worker->connections[$this->id]);
             }
         }
     }
@@ -340,9 +343,9 @@ class TcpConnection
             try {
                 $len = @fwrite($this->_socket, $send_buffer);
             } catch (\Exception $e) {
-                Worker::exit($e);
+                Worker::stopWorker($e);
             } catch (\Error $err) {
-                Worker::exit($err);
+                Worker::stopWorker($err);
             }
             // 同步阻塞发送
             if ($len === strlen($send_buffer)) {
@@ -362,9 +365,9 @@ class TcpConnection
                         try {
                             \call_user_func($this->onError, $this, self::SEND_MSG_FAIL, 'client closed');
                         } catch (\Exception $e) {
-                            Worker::exit($e);
+                            Worker::stopWorker($e);
                         } catch (\Error $err) {
-                            Worker::exit($err);
+                            Worker::stopWorker($err);
                         }
                     }
                     $this->destroy();
@@ -403,7 +406,7 @@ class TcpConnection
                 try {
                     \call_user_func($this->onBufferDrain, $this);
                 } catch (\Throwable $e) {
-                    Worker::exit($e);
+                    Worker::stopWorker($e);
                 }
             }
 
@@ -434,9 +437,9 @@ class TcpConnection
                 try {
                     \call_user_func($this->onError, $this, static::SEND_MSG_FAIL, 'send buffer full and drop package');
                 } catch (\Exception $e) {
-                    Worker::exit($e);
-                } catch (\Error $error) {
-                    Worker::exit($error);
+                    Worker::stopWorker($e);
+                } catch (\Error $err) {
+                    Worker::stopWorker($err);
                 }
             }
             return true;
@@ -454,9 +457,9 @@ class TcpConnection
                 try {
                     \call_user_func($this->onBufferFull, $this);
                 } catch (\Exception $e) {
-                    Worker::exit($e);
+                    Worker::stopWorker($e);
                 } catch (\Error $err) {
-                    Worker::exit($err);
+                    Worker::stopWorker($err);
                 }
             }
         }
@@ -502,6 +505,11 @@ class TcpConnection
         }
     }
 
+    public function setLayerProtocol(string $protocol = ''):void
+    {
+        $this->layerProtocol = $protocol;
+    }
+
     public function pauseRecv()
     {
         if ($this->isPaused === false) {
@@ -521,7 +529,7 @@ class TcpConnection
     /**
      * @return string
      */
-    public function getRemoteAddress():string
+    public function getRemoteAddress(): string
     {
         return $this->_remoteAddress;
     }
@@ -530,7 +538,7 @@ class TcpConnection
      * 获取客户端IP地址
      * @return string
      */
-    public function getClientIP() : string
+    public function getClientIP(): string
     {
         $remoteAddress = parse_url($this->_remoteAddress, PHP_URL_HOST);
         if (is_string($remoteAddress)) {
@@ -543,12 +551,21 @@ class TcpConnection
      * 获取客户端端口号
      * @return int
      */
-    public function getClientPort() :int
+    public function getClientPort(): int
     {
         $remotePort = parse_url($this->_remoteAddress, PHP_URL_PORT);
         if (is_int($remotePort) && $remotePort > 0) {
             return $remotePort;
         }
         return 0;
+    }
+
+    /**
+     * 手动清除缓冲区数据
+     * @var string
+     */
+    public function clearReaderBuffer()
+    {
+        $this->readDataBuffer = '';
     }
 }
