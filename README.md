@@ -1,24 +1,24 @@
 ## Swoman Socks5
 Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/>
-**仅实现任意TCP流量代理**，采用SOCKS5 协议实现，故“Swoman Socks5”。
+采用SOCKS5 协议实现代理服务器，故“Swoman Socks5”。
 
-## 未知力量的渴望：
+## 源于好奇：
 - 为了探索Workerman 实现原理，使用Swoole4 + Pcntl 实现核心功能。
 - 为了更方便掌握原理，实现的单实例单端口多进程高性能服务器、不支持单进程多端口，当然这并不影响，掌握它的原理。
 - 为了更方便解决实际遇见的问题，拥有改造Workerman的能力。
 
 ## Socks5 协议
+> SOCKS5支持TCP和UDP应用。<br/>
 > SOCKS是一种网络传输协议，主要用于客户端与外网服务器之间通讯的中间传递。<br/>
 > 当客户端要访问外部的服务器时，就跟SOCKS代理服务器连接。这个代理服务器控制客户端访问外网的资格。<br/>
-> SOCKS5支持TCP和UDP应用。<br/>
-> 但是由于SOCKS5还支持各种认证机制和域名解析（DNS）也就是说，SOCKS5可以支持SOCKS4支持的任何东西，但它与SOCKS4不一样。<br/>
+> SOCKS5还支持各种认证机制和域名解析（DNS）。<br/>
 
 ## 安装使用?
-**1.** 安装扩展pcntl+swoole<br/>
-**2.** 个人电脑安装SOCKS5客户端， “Proxifier”即可，将全部流量转发给服务器。<br/>
-**3.** php start_socks5.php start 启动代理服务<br/>
+1. 安装扩展pcntl+swoole<br/>
+2. 个人电脑安装SOCKS5客户端， “Proxifier”即可，将全部流量转发给服务器。<br/>
+3. php start_socks5.php start 启动代理服务<br/>
 
-## Socks5 Run??：
+## Socks5 Server：
     <?php
     require __DIR__ . '/vendor/autoload.php';
     
