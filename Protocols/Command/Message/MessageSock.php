@@ -73,11 +73,13 @@ class MessageSock
         $addr = '';
         switch ($sock['addr_type']) {
             case AddressGet::IPV4:
-                $dest_addr = explode('.', $sock['dest_addr']);
-                $addr = pack('C*', ... $dest_addr);
+//                $dest_addr = explode('.', $sock['dest_addr']);
+//                $addr = pack('C*', ... $dest_addr);
+                $addr = inet_pton($sock['dest_addr']);
                 break;
             case AddressGet::IPV6:
 //                $header .= pack('N16', $dest_addr);
+                $addr = inet_pton($sock['dest_addr']);
                 break;
             case AddressGet::DNS:
                 $dest_addr = $sock['dest_addr'];
