@@ -16,7 +16,7 @@ class GetRequestLenCommand extends AbstractCommand
 
     public function run(string $buffer, TcpConnection $connection): int
     {
-        Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " 执行客户端代理请求命令");
+        Worker::debug($connection->getRemoteAddress() . " 执行客户端代理请求命令");
 
         if (strlen($buffer) < 7) {
             $connection->close(new MessageClosed(Command::COMMAND_SERVER_ERROR, '0.0.0.0', '0'));

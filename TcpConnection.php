@@ -534,29 +534,21 @@ class TcpConnection
     }
 
     /**
-     * 获取客户端IP地址
+     * 目标主机
      * @return string
      */
-    public function getClientIP(): string
+    public function getRemoteHost(): string
     {
-        $remoteAddress = parse_url($this->_remoteAddress, PHP_URL_HOST);
-        if (is_string($remoteAddress)) {
-            return $remoteAddress;
-        }
-        return 'N/A';
+        return $remote_port = \parse_url($this->_remoteAddress, PHP_URL_HOST);
     }
 
     /**
-     * 获取客户端端口号
+     * 目标主机端口
      * @return int
      */
-    public function getClientPort(): int
+    public function getRemotePort(): int
     {
-        $remotePort = parse_url($this->_remoteAddress, PHP_URL_PORT);
-        if (is_int($remotePort) && $remotePort > 0) {
-            return $remotePort;
-        }
-        return 0;
+        return (int)$remote_port = \parse_url($this->_remoteAddress, PHP_URL_PORT);
     }
 
     /**

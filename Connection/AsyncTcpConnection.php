@@ -204,11 +204,7 @@ class AsyncTcpConnection extends TcpConnection
      */
     public function getRemoteHost(): string
     {
-        $remote_host = \parse_url($this->_remoteAddress, PHP_URL_HOST);
-        if (\is_string($remote_host)) {
-            return $remote_host;
-        }
-        return 'N/A';
+        return $remote_port = \parse_url($this->_remoteAddress, PHP_URL_HOST);
     }
 
     /**
@@ -217,10 +213,6 @@ class AsyncTcpConnection extends TcpConnection
      */
     public function getRemotePort(): int
     {
-        $remote_port = \parse_url($this->_remoteAddress, PHP_URL_PORT);
-        if (\is_int($remote_port) && $remote_port > 0) {
-            return $remote_port;
-        }
-        return 0;
+        return (int)$remote_port = \parse_url($this->_remoteAddress, PHP_URL_PORT);
     }
 }

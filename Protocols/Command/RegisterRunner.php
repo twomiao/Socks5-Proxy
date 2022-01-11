@@ -22,14 +22,12 @@ class RegisterRunner
 
     public static function run(string $buffer, TcpConnection $connection): int
     {
-        if (!isset(self::$registerCommands[$connection->state])) {
+        $command = self::$registerCommands[$connection->state] ?? UnknownCommand::COMMAND;
+
+        if (!is_a($command, AbstractCommand::class, true)) {
             $connection->state = UnknownCommand::COMMAND;
         }
-        $command = self::$registerCommands[$connection->state];
-        if (!$command instanceof AbstractCommand) {
-//            var_dump($command);
-            $connection->state = UnknownCommand::COMMAND;
-        }
+
         return $len = call_user_func([$command, 'run'], $buffer, $connection);
     }
 }

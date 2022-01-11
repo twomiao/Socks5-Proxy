@@ -40,7 +40,7 @@ class PasswordAuthCommand extends AbstractCommand
         $password_len = ord($buffer[$offset]);
         $password = substr($buffer, $offset, $password_len);
 
-        Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " 登录账号 'username:{$username}, password:{$password}'");
+        Worker::debug($connection->getRemoteAddress() . " 登录账号 'username:{$username}, password:{$password}'");
 
         $auth = $connection->onSocks5Auth;
 

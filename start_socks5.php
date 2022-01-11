@@ -41,7 +41,7 @@ $worker->onConnect = function (TcpConnection $connection) {
 };
 
 $worker->onMessage = function (TcpConnection $connection, $message) {
-    Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " -> " . $message);
+    Worker::debug($connection->getRemoteAddress() . " -> " . $message);
     $message = json_decode($message, true);
     if (!$message) {
         $connection->close(
@@ -60,14 +60,19 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
                 $connection->send(
                     new MessageSock(
                         Command::COMMAND_CONNECT_SUCCESS,
-                        $connection->getClientIP(),
-                        $connection->getClientPort(),
+                        $connection->getRemoteHost(),
+                        $connection->getRemotePort(),
                         (int)$message['addr_type'],
                     )
                 );
+                Worker::debug($connection->getRemoteAddress() . " -> 代理通道已连接资源主机.".$proxyClient->getRemoteAddress());
 
                 $proxyClient->onMessage = function (AsyncTcpConnection $proxyClient, $data) use ($connection) {
                     $connection->send($data);
+                    Worker::debug(
+                        "资源主机转发流量到代理客户端 ".
+                        $proxyClient->getRemoteAddress() . " -> " . $connection->getRemoteAddress().'.'
+                    );
                 };
 
                 $proxyClient->onBufferFull = function (AsyncTcpConnection $proxyClient) {
@@ -80,6 +85,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
 
                 $connection->onMessage = function (TcpConnection $connection, $data) use ($proxyClient) {
                     $proxyClient->send($data);
+                    Worker::debug($connection->getRemoteAddress()." -> 代理客户端流量转发到资源主机 -> ".$proxyClient->getRemoteAddress().".");
                 };
                 $connection->onBufferFull = function (TcpConnection $connection) {
                     $connection->pauseRecv();
@@ -90,10 +96,12 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
 
                 $connection->onClose = function ($connection) use ($proxyClient) {
                     $proxyClient->close();
+                    Worker::debug($connection->getRemoteAddress() . " -> 关闭资源主机连接.");
                 };
 
                 $proxyClient->onClose = function ($proxyClient) use ($connection) {
                     $connection->close();
+                    Worker::debug($connection->getRemoteAddress() . " -> 关闭代理通道.");
                 };
             };
 
