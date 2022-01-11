@@ -78,7 +78,6 @@ class MessageSock
                 $addr = inet_pton($sock['dest_addr']);
                 break;
             case AddressGet::IPV6:
-//                $header .= pack('N16', $dest_addr);
                 $addr = inet_pton($sock['dest_addr']);
                 break;
             case AddressGet::DNS:

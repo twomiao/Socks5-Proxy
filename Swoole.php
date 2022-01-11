@@ -93,9 +93,9 @@ final class Swoole implements LoopInterface
             try {
                 \call_user_func_array($func, (array)$args);
             } catch (\Exception $e) {
-                Worker::exit($e);
+                Worker::stopWorker($e);
             } catch (\Error $err) {
-                Worker::exit($err);
+                Worker::stopWorker($err);
             } finally {
                 if ($flag === self::EV_TIMER_ONCE && isset($this->_timers[$timer_id])) {
                     unset($this->_timers[$timer_id]);
