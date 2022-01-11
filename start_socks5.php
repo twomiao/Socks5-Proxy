@@ -41,7 +41,7 @@ $worker->onConnect = function (TcpConnection $connection) {
 };
 
 $worker->onMessage = function (TcpConnection $connection, $message) {
-//    Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " 客户端代理数据 " . $message);
+    Worker::debug($connection->getClientIP() . ":" . $connection->getClientPort() . " -> " . $message);
     $message = json_decode($message, true);
     if (!$message) {
         $connection->close(
@@ -49,7 +49,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
         );
         return;
     }
-    var_dump($message);
+//    var_dump($message);
 
     switch ($command = $message['command']) {
         case 'CONNECT':
