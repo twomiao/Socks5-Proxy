@@ -70,7 +70,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
                 $proxyClient->onMessage = function (AsyncTcpConnection $proxyClient, $data) use ($connection) {
                     $connection->send($data);
                     Worker::debug(
-                        $proxyClient->getRemoteAddress() . " 资源主机转发流量到代理客户端 -> " . $connection->getRemoteAddress().'.'
+                        $proxyClient->getRemoteAddress() . " -> 资源主机转发流量到代理客户端 " . $connection->getRemoteAddress().'.'
                     );
                 };
 
@@ -84,7 +84,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
 
                 $connection->onMessage = function (TcpConnection $connection, $data) use ($proxyClient) {
                     $proxyClient->send($data);
-                    Worker::debug($connection->getRemoteAddress()." -> 代理客户端流量转发到资源主机 -> ".$proxyClient->getRemoteAddress().".");
+                    Worker::debug($connection->getRemoteAddress()." -> 代理客户端流量转发到资源主机 ".$proxyClient->getRemoteAddress().".");
                 };
                 $connection->onBufferFull = function (TcpConnection $connection) {
                     $connection->pauseRecv();
