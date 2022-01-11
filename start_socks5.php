@@ -65,7 +65,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
                         (int)$message['addr_type'],
                     )
                 );
-                Worker::debug($connection->getRemoteAddress() . " -> 代理通道已连接资源主机.".$proxyClient->getRemoteAddress());
+                Worker::debug($connection->getRemoteAddress() . " -> 代理通道已连接资源主机 ".$proxyClient->getRemoteAddress());
 
                 $proxyClient->onMessage = function (AsyncTcpConnection $proxyClient, $data) use ($connection) {
                     $connection->send($data);
@@ -95,7 +95,7 @@ $worker->onMessage = function (TcpConnection $connection, $message) {
 
                 $connection->onClose = function ($connection) use ($proxyClient) {
                     $proxyClient->close();
-                    Worker::debug($connection->getRemoteAddress() . " -> 关闭资源主机连接.");
+                    Worker::debug($proxyClient->getRemoteAddress() . " -> 关闭资源主机连接.");
                 };
 
                 $proxyClient->onClose = function ($proxyClient) use ($connection) {
