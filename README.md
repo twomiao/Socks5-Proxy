@@ -13,9 +13,6 @@ Workerman 设计思想，使用Swoole 扩展实现，命名为“Swoman”; <br/
 > 当客户端要访问外部的服务器时，就跟SOCKS代理服务器连接。这个代理服务器控制客户端访问外网的资格。<br/>
 > SOCKS5还支持各种认证机制和域名解析（DNS）。<br/>
 
-## 运行：
-<img src="https://github.com/twomiao/Socks5-Proxy/images/img.png" width="40%">
-
 ## 安装使用?
 1. 安装扩展 linux + pcntl + swoole<br/>
 2. 个人电脑安装SOCKS5客户端， “Proxifier”即可，将全部流量转发给服务器。<br/>
