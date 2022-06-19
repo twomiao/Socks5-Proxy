@@ -25,7 +25,7 @@ $worker = new Worker('tcp://0.0.0.0:1090');
 $worker->layerProtocol = Socks5::class;
 $worker->user = 'meows';
 $worker->group = 'meows';
-$worker->count = 16;
+$worker->count = 4;
 
 $worker->onWorkerStart = function () {
     Worker::debug('Worker started success.');

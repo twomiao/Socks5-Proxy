@@ -22,6 +22,12 @@ class Worker
     const STATE_RUNNING = 2;
 
     /**
+     * 平滑重启
+     * @var int
+     */
+    const STATE_RELOADING = 3;
+
+    /**
      * 停止成功
      * @int
      */
@@ -43,6 +49,12 @@ class Worker
     public static string $logFile = '';
 
     /**
+     * 通知停止超时
+     * @var int $stopTimeout
+     */
+    public static int $stopTimeout = 4;
+
+    /**
      * @var bool $daemonize
      */
     public static bool $daemonize = false;
@@ -51,6 +63,12 @@ class Worker
      * @var bool $smoothStop
      */
     protected static bool $smoothStop = false;
+
+    /**
+     * 判断是否reload 完毕
+     * @var array $reloadable
+     */
+    protected static array $reloadable = [];
 
     /**
      * ['pid'=>'pid', 'pid'=>'pid',....]
@@ -65,22 +83,25 @@ class Worker
     protected static array $idMap = [];
 
     /**
+     * 多路服用驱动
      * @var ?LoopInterface $eventLoop
      */
     public static ?LoopInterface $eventLoop = null;
 
     /**
-     *
+     * Master 进程PID位置
      * @var string $pidFile
      */
     protected static string $pidFile;
 
     /**
+     * Master 进程PID
      * @var int $masterPid
      */
     protected static int $masterPid;
 
     /**
+     * 当前Worker进程TCP 连接
      * @var array $connections
      */
     public array $connections = [];
@@ -227,7 +248,9 @@ class Worker
         }
     }
 
-
+    /**
+     * @throws \Exception
+     */
     public function start()
     {
         $this->initialization();
@@ -239,23 +262,32 @@ class Worker
         $this->monitorWorkers();
     }
 
+    /**
+     * Master 进程信号安装
+     */
     protected function installSignal()
     {
         $signalDispatcher = array($this, 'signalDispatcher');
 
+        \pcntl_signal(\SIGUSR1, $signalDispatcher, false);
         \pcntl_signal(\SIGHUP, $signalDispatcher, false);
         \pcntl_signal(\SIGINT, $signalDispatcher, false);
         \pcntl_signal(\SIGTERM, $signalDispatcher, false);
     }
 
+    /**
+     *  worker 进程信号安装
+     */
     protected function reinstallSignal()
     {
         $signal_dispatcher = array($this, 'signalDispatcher');
 
+        \pcntl_signal(\SIGUSR1, \SIG_IGN, false);
         \pcntl_signal(\SIGHUP, \SIG_IGN, false);
         \pcntl_signal(\SIGINT, \SIG_IGN, false);
         \pcntl_signal(\SIGTERM, \SIG_IGN, false);
 
+        static::$eventLoop->add(\SIGUSR1, LoopInterface::EV_SIGNAL, $signal_dispatcher);
         static::$eventLoop->add(\SIGHUP, LoopInterface::EV_SIGNAL, $signal_dispatcher);
         static::$eventLoop->add(\SIGINT, LoopInterface::EV_SIGNAL, $signal_dispatcher);
         static::$eventLoop->add(\SIGTERM, LoopInterface::EV_SIGNAL, $signal_dispatcher);
@@ -273,9 +305,61 @@ class Worker
                 static::$smoothStop = true;
                 $this->stopAll();
                 break;
+            case \SIGUSR1: // reload
+                static::$smoothStop = !($signal === \SIGUSR1);
+                static::$reloadable = static::$pidMap; // 拷贝PID数据进行平滑重启
+                $this->reload();
+                break;
         }
     }
 
+    /**
+     * 平滑重启worker服务
+     */
+    public function reload() {
+        // Master
+        if (static::$masterPid === \posix_getpid()) {
+            if (static::$stateCurrent === static::STATE_STOPPED) {
+                return;
+            }
+            // 正在执行reload
+            static::$stateCurrent = static::STATE_RELOADING;
+
+            // reload 完成
+            if (empty(static::$reloadable) &&
+                static::$stateCurrent === static::STATE_RELOADING) {
+                static::$stateCurrent = static::STATE_RUNNING;
+                Worker::debug("Proxy service restart completed.");
+                return;
+            }
+            $signal = \SIGUSR1;
+            if (static::$smoothStop) {
+                $signal = \SIGUSR2;  // 平滑重启, -g
+            }
+            $worker_pid = \current(static::$reloadable);
+            // 通知worker 平滑重启
+            \posix_kill($worker_pid, $signal);
+
+            \pcntl_alarm(static::$stopTimeout);
+
+            if (!static::$smoothStop) {
+                \pcntl_signal(SIGALRM, function() {posix_kill(getmypid(), 9);});
+//                Timer::add(static::$stopTimeout, 'posix_kill', [$worker_pid, \SIGKILL], false);
+            }
+            return;
+        }
+
+        Worker::debug("Proxy service is performing a reload.");
+        // 代理服务worker 接收到平滑重启信号
+        if (!static::$smoothStop) {
+            $this->stopAll();
+        }
+    }
+
+    /**
+     * 停止Worker 代理服务
+     * @param int $code
+     */
     public function stopAll($code = 0)
     {
         static::$stateCurrent = static::STATE_STOPPED;
@@ -284,7 +368,7 @@ class Worker
         if (static::$masterPid === \posix_getpid()) {
             if (!$this->stopped) {
                 // 不使用Timer::add 因为退出事件循环，导致主进程退出较慢
-                \pcntl_alarm(self::SIG_KILL_TIMEOUT);
+                \pcntl_alarm(static::SIG_KILL_TIMEOUT);
                 $handler = function () {
                     foreach (static::$pidMap as $worker_pid) {
                         $sigo = static::$smoothStop ? \SIGHUP : \SIGINT;
@@ -356,6 +440,7 @@ class Worker
             \mt_srand();
             // Clear data
             static::$pidMap = [];
+            static::$reloadable = [];
             static::$onMasterStart = static::$onMasterStart = null;
             Timer::delAll();
             if ($this->reusePort) {
@@ -380,7 +465,7 @@ class Worker
     {
         global $argv;
 
-        $available_commands = ['stop' => ['-d', '-g'], 'start' => ['-d']];
+        $available_commands = ['stop' => ['-d', '-g'], 'start' => ['-d'], 'reload' =>[]];
         $usage = <<<HELP
 Usage: php Yourfile <command> [mode]
 AbstractCommand:
@@ -388,6 +473,7 @@ start           Start worker in DEBUG mode.
                 Use mode -d to start in DAEMON mode.
 stop            Stop worker.
                 Use mode -g to stop gracefully.\n
+reload          Hot update business code.\n
 HELP;
 
         $start_file = $argv[0];
@@ -405,15 +491,15 @@ HELP;
             }
             $mode = $argv[2];
         }
-
         $master_pid = \is_file(static::$pidFile) ? (int)\file_get_contents(static::$pidFile) : 0;
         $is_alive_master = $master_pid && posix_kill($master_pid, 0);
         if ($command === 'start' && $is_alive_master) {
-            exit(self::$processTitle . " [ {$start_file} ] 服务已运行中!\n");
+            exit(static::$processTitle . " [ {$start_file} ] 服务已运行中!\n");
         } elseif ($command === 'stop' && !$is_alive_master) {
-            exit(self::$processTitle . " [ {$start_file} ] 服务未运行!\n");
+            exit(static::$processTitle . " [ {$start_file} ] 服务未运行!\n");
+        } elseif($command === 'reload' && !$is_alive_master) {
+            exit(static::$processTitle . " [ {$start_file} ] 服务未运行!\n");
         }
-
         switch ($command) {
             case 'start':
                 $mode_str = '调试模式';
@@ -421,31 +507,35 @@ HELP;
                     static::$daemonize = true;
                     $mode_str = '守护进程模式';
                 }
-                echo "[ " . self::$processTitle . " ] | {$mode_str}" . PHP_EOL;
+                echo "[ " . static::$processTitle . " ] | {$mode_str}" . PHP_EOL;
                 break;
             case 'stop':
                 if (static::$smoothStop = ($mode === '-g')) {
                     $sig = \SIGHUP;
-                    echo "[ " . self::$processTitle . " ] 正在平滑停止...\n";
+                    echo "[ " . static::$processTitle . " ] 正在平滑停止...\n";
                 } else {
                     $sig = \SIGINT;
-                    echo "[ " . self::$processTitle . " ] 正在停止...\n";
+                    echo "[ " . static::$processTitle . " ] 正在停止...\n";
                 }
 
                 $stop_at = \time() + 5;
                 while (1) {
                     $is_alive_master = @\posix_kill($master_pid, 0);
                     if (!$is_alive_master) {
-                        exit(self::$processTitle . " [ {$start_file} ] 停止服务成功.\n");
+                        exit(static::$processTitle . " [ {$start_file} ] 停止服务成功.\n");
                     }
 
                     $master_pid && \posix_kill($master_pid, $sig);
 
-                    if (static::$smoothStop === false && $stop_at < \time() && $is_alive_master) {
-                        exit(self::$processTitle . " [ {$start_file} ] 停止服务失败.\n");
+                    if (static::$smoothStop === false && $stop_at < \time()) {
+                        exit(static::$processTitle . " [ {$start_file} ] 停止服务失败.\n");
                     }
                     \usleep(100000);
                 }
+            case 'reload':
+                // 给代理服务器Master 发送平滑重启信号
+                \posix_kill($master_pid, \SIGUSR1);
+                 exit(0);
             default:
                 exit($usage);
         }
@@ -479,6 +569,7 @@ HELP;
             $pid = \pcntl_wait($status, \WUNTRACED);
             \pcntl_signal_dispatch();
             if ($pid > 0) {
+                // 可能是: 平滑重启、意外停止
                 if (static::$stateCurrent !== static::STATE_STOPPED) {
                     if (isset(static::$pidMap[$pid])) {
                         // 异常退出进程
@@ -490,9 +581,18 @@ HELP;
                         if ($workerId === false) {
                             continue;
                         }
+                        // 创建一个worker
                         $this->forkOneWorker($workerId);
+                        if (static::$reloadable) {
+                            if (isset(static::$reloadable[$pid])) {
+                                unset(static::$reloadable[$pid]);
+                            }
+                            \pcntl_alarm(0);
+                            static::reload();
+                        }
                     }
                 }
+                // 释放内存
                 unset(static::$pidMap[$pid]);
             }
 
@@ -502,7 +602,7 @@ HELP;
                 if (\file_exists(static::$pidFile)) {
                     @\unlink(static::$pidFile);
                 }
-                echo "[ " . self::$processTitle . " ] 停止成功\n";
+                echo "[ " . static::$processTitle . " ] 停止成功\n";
                 if (static::$onMasterStop) {
                     try {
                         \call_user_func(static::$onMasterStop);
@@ -619,17 +719,17 @@ HELP;
             }
         }
 
-        if (empty(self::$pidFile)) {
-            self::$pidFile = __DIR__ . '/' . self::$processTitle . '.pid';
+        if (empty(static::$pidFile)) {
+            static::$pidFile = __DIR__ . '/' . static::$processTitle . '.pid';
         }
 
-        if (empty(self::$logFile)) {
-            self::$logFile = __DIR__ . '/' . self::$processTitle . '.log';
+        if (empty(static::$logFile)) {
+            static::$logFile = __DIR__ . '/' . static::$processTitle . '.log';
         }
 
-        if (!\file_exists(self::$logFile)) {
-            \touch(self::$logFile);
-            \chmod(self::$logFile, 0622);
+        if (!\file_exists(static::$logFile)) {
+            \touch(static::$logFile);
+            \chmod(static::$logFile, 0622);
         }
 
         \swoole_set_process_name(static::$processTitle . ': master process');
