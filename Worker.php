@@ -329,7 +329,7 @@ class Worker
             if (empty(static::$reloadable) &&
                 static::$stateCurrent === static::STATE_RELOADING) {
                 static::$stateCurrent = static::STATE_RUNNING;
-                Worker::debug("Proxy service restart completed.");
+                Worker::debug("Proxy service reload completed.");
                 return;
             }
             $signal = \SIGUSR1;
