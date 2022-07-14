@@ -269,10 +269,11 @@ class Worker
     {
         $signalDispatcher = array($this, 'signalDispatcher');
 
-        \pcntl_signal(\SIGUSR1, $signalDispatcher, false);
-        \pcntl_signal(\SIGHUP, $signalDispatcher, false);
-        \pcntl_signal(\SIGINT, $signalDispatcher, false);
-        \pcntl_signal(\SIGTERM, $signalDispatcher, false);
+        foreach ($signals = [\SIGUSR1,\SIGHUP,\SIGINT,\SIGTERM] as $signal) {
+            \pcntl_signal($signal, $signalDispatcher, false);
+        }
+        // RST 包导致进程退出
+        \pcntl_signal(SIGPIPE, SIG_IGN);
     }
 
     /**
@@ -282,15 +283,12 @@ class Worker
     {
         $signal_dispatcher = array($this, 'signalDispatcher');
 
-        \pcntl_signal(\SIGUSR1, \SIG_IGN, false);
-        \pcntl_signal(\SIGHUP, \SIG_IGN, false);
-        \pcntl_signal(\SIGINT, \SIG_IGN, false);
-        \pcntl_signal(\SIGTERM, \SIG_IGN, false);
-
-        static::$eventLoop->add(\SIGUSR1, LoopInterface::EV_SIGNAL, $signal_dispatcher);
-        static::$eventLoop->add(\SIGHUP, LoopInterface::EV_SIGNAL, $signal_dispatcher);
-        static::$eventLoop->add(\SIGINT, LoopInterface::EV_SIGNAL, $signal_dispatcher);
-        static::$eventLoop->add(\SIGTERM, LoopInterface::EV_SIGNAL, $signal_dispatcher);
+        foreach ($signals = [\SIGUSR1,\SIGHUP,\SIGINT,\SIGTERM] as $signal) {
+            // 忽略主进程信号
+            \pcntl_signal($signal, \SIG_IGN, false);
+            // 注册信号到多路复用
+            static::$eventLoop->add($signal, LoopInterface::EV_SIGNAL, $signal_dispatcher);
+        }
     }
 
     public function signalDispatcher($signal)
